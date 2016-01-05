@@ -24,9 +24,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.RunnableFuture;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
+import static java.nio.file.StandardWatchEventKinds.*;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -407,7 +405,7 @@ public class Reading extends Application {
         {
             Path path = Paths.get("C:/Users/rvanduijnhoven/Documents/jsfoutput/");
             WatchService service = FileSystems.getDefault().newWatchService();
-            path.register(service, ENTRY_MODIFY);
+            path.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
             WatchKey key;
             while (true)
             {
@@ -425,7 +423,7 @@ public class Reading extends Application {
 
                     Path changed = ev.context();
                     Path child = path.resolve(changed);
-                    if (child.toString().equals("jsfweek14.bin")) {
+                    if (changed.toString().equals("jsfweek14.bin")) {
 
                         clearKochPanel();
                         File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");

@@ -147,6 +147,8 @@ public class Main extends Application {
                 x = saveBinaryFileNoBuffer();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
             speed.setText(String.valueOf(x / 1000000));
             //drawAllEdges();
@@ -416,9 +418,15 @@ public class Main extends Application {
         return time = System.nanoTime() - time;
     }
 
-    public double saveBinaryFileNoBuffer() throws IOException {
+    public double saveBinaryFileNoBuffer() throws IOException, InterruptedException {
         double time = System.nanoTime();
         File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");
+        boolean deleted = file.delete();
+        Thread.sleep(1000);
+        if (!deleted)
+        {
+            saveBinaryFileWithBuffer();
+        }
         FileChannel fileChannel = null;
         MappedByteBuffer map = null;
         int counter = 0;
