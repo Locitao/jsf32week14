@@ -398,41 +398,34 @@ public class Reading extends Application {
     public void watchForNewEdges()
     {
         //File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");
-        Path path = FileSystems.getDefault().getPath(System.getProperty("user.dir", "C:\\User\\rvanduijnhoven\\Documents\\jsfoutput"));
 
-        //Check if folder exists
-        try {
-            Boolean isFolder = (Boolean) Files.getAttribute(path,
-                    "basic:isDirectory", NOFOLLOW_LINKS);
-            if (!isFolder) {
-                throw new IllegalArgumentException("Path: " + path + " is not a folder");
-            }
-        } catch (IOException ioe) {
-            // Folder does not exists
-            ioe.printStackTrace();
-        }
         //Get the file system
-        FileSystem fs = path.getFileSystem();
+        //FileSystem fs = path.getFileSystem();
 
         //Create the watchservice
-        try(WatchService service = fs.newWatchService())
+        try
         {
-            path.register(service, ENTRY_MODIFY, ENTRY_CREATE);
-            WatchKey key = null;
+            Path path = Paths.get("C:/Users/rvanduijnhoven/Documents/jsfoutput/");
+            WatchService service = FileSystems.getDefault().newWatchService();
+            path.register(service, ENTRY_MODIFY);
+            WatchKey key;
             while (true)
             {
                 key = service.take();
                 for(WatchEvent<?> event : key.pollEvents()) {
                     //Code here that does something when new edges have been generated
-                    WatchEvent.Kind kind = event.kind();
+                    System.out.println(event.context().toString());
+                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                    WatchEvent.Kind kind = ev.kind();
 
                     if (kind == OVERFLOW)
                     {
                         continue; //just to demonstrate
                     }
 
-                    Path changed = (Path) event.context();
-                    if (changed.endsWith("jsfweek14.bin")) {
+                    Path changed = ev.context();
+                    Path child = path.resolve(changed);
+                    if (child.toString().equals("jsfweek14.bin")) {
 
                         clearKochPanel();
                         File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");
@@ -466,9 +459,7 @@ public class Reading extends Application {
                             map.clear();
                         }
                     }
-                }
-                if(!key.reset()) {
-                    break; //loop
+                    key.reset();
                 }
             }
 
