@@ -19,9 +19,24 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.*;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.RunnableFuture;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
+
+import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 
 /**
  * @author rvanduijnhoven
@@ -165,6 +180,15 @@ public class Reading extends Application {
             }
             speed.setText(String.valueOf(x / 1000000));
         });
+        Thread t = new Thread()
+        {
+            public void run()
+            {
+                watchForNewEdges();
+            }
+        };
+        t.start();
+
 
     }
 
@@ -369,6 +393,90 @@ public class Reading extends Application {
         }
 
         return System.nanoTime() - time;
+    }
+
+    public void watchForNewEdges()
+    {
+        //File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");
+        Path path = FileSystems.getDefault().getPath(System.getProperty("user.dir", "C:\\User\\rvanduijnhoven\\Documents\\jsfoutput"));
+
+        //Check if folder exists
+        try {
+            Boolean isFolder = (Boolean) Files.getAttribute(path,
+                    "basic:isDirectory", NOFOLLOW_LINKS);
+            if (!isFolder) {
+                throw new IllegalArgumentException("Path: " + path + " is not a folder");
+            }
+        } catch (IOException ioe) {
+            // Folder does not exists
+            ioe.printStackTrace();
+        }
+        //Get the file system
+        FileSystem fs = path.getFileSystem();
+
+        //Create the watchservice
+        try(WatchService service = fs.newWatchService())
+        {
+            path.register(service, ENTRY_MODIFY, ENTRY_CREATE);
+            WatchKey key = null;
+            while (true)
+            {
+                key = service.take();
+                for(WatchEvent<?> event : key.pollEvents()) {
+                    //Code here that does something when new edges have been generated
+                    WatchEvent.Kind kind = event.kind();
+
+                    if (kind == OVERFLOW)
+                    {
+                        continue; //just to demonstrate
+                    }
+
+                    Path changed = (Path) event.context();
+                    if (changed.endsWith("jsfweek14.bin")) {
+
+                        clearKochPanel();
+                        File file = new File("C:\\Users\\rvanduijnhoven\\Documents\\jsfoutput\\jsfweek14.bin");
+                        FileChannel fileChannel = null;
+                        MappedByteBuffer map = null;
+                        int counter = 0;
+                        //Now read every edge from the file and draw it.
+                        try {
+                            fileChannel = new RandomAccessFile(file, "r").getChannel();
+                            map = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, 4096 * 128 * 128);
+                            double d = map.getDouble();
+                            currentLevel = (int) d;
+                            counter = (int) (3 * Math.pow(4, currentLevel - 1));
+                            for (int i = 0; i <= counter; i++) {
+                                double X1 = map.getDouble();
+                                double Y1 = map.getDouble();
+                                double X2 = map.getDouble();
+                                double Y2 = map.getDouble();
+                                double red = map.getDouble();
+                                double green = map.getDouble();
+                                double blue = map.getDouble();
+                                Edge e = new Edge(X1, Y1, X2, Y2, new Color(red, green, blue, 1));
+                                drawEdge(e);
+                            }
+                            key.reset();
+
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        } finally {
+                            fileChannel.close();
+                            map.clear();
+                        }
+                    }
+                }
+                if(!key.reset()) {
+                    break; //loop
+                }
+            }
+
+        } catch(IOException ioe) {
+        ioe.printStackTrace();
+        } catch(Exception ie) {
+            ie.printStackTrace();
+        }
     }
 
     /**
